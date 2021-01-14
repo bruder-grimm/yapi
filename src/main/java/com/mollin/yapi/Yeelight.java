@@ -1,22 +1,10 @@
 package com.mollin.yapi;
 
 import com.mollin.yapi.command.YeelightCommand;
-import com.mollin.yapi.enumeration.YeelightAdjustAction;
-import com.mollin.yapi.enumeration.YeelightAdjustProperty;
 import com.mollin.yapi.enumeration.YeelightEffect;
-import com.mollin.yapi.enumeration.YeelightProperty;
 import com.mollin.yapi.exception.YeelightResultErrorException;
 import com.mollin.yapi.exception.YeelightSocketException;
 import com.mollin.yapi.flow.YeelightFlow;
-import com.mollin.yapi.result.YeelightResultError;
-import com.mollin.yapi.result.YeelightResultOk;
-import com.mollin.yapi.socket.YeelightSocketHolder;
-
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 import static com.mollin.yapi.utils.YeelightUtils.clamp;
 import static com.mollin.yapi.utils.YeelightUtils.clampAndComputeRGBValue;

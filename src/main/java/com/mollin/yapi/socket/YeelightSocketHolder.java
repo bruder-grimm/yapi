@@ -3,10 +3,7 @@ package com.mollin.yapi.socket;
 import com.mollin.yapi.exception.YeelightSocketException;
 import org.pmw.tinylog.Logger;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -19,6 +16,7 @@ public class YeelightSocketHolder {
 
     private final InetAddress ip;
     private final int port;
+    private final Socket socket;
     private final BufferedReader socketReader;
     private final BufferedWriter socketWriter;
 
@@ -35,8 +33,9 @@ public class YeelightSocketHolder {
             this.port = port;
 
             InetSocketAddress inetSocketAddress = new InetSocketAddress(this.ip, port);
-            Socket socket = new Socket();
+            socket = new Socket();
             socket.connect(inetSocketAddress, YeelightSocketHolder.SOCKET_TIMEOUT);
+            socket.setKeepAlive(true);
             socket.setSoTimeout(SOCKET_TIMEOUT);
             this.socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.socketWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -77,5 +76,11 @@ public class YeelightSocketHolder {
         } catch (Exception e) {
             throw new YeelightSocketException(e);
         }
+    }
+
+    public void close() throws IOException {
+        this.socketWriter.close();
+        this.socketReader.close();
+        this.socket.close();
     }
 }

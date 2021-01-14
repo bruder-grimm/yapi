@@ -92,7 +92,12 @@ public class YeelightDevice extends Yeelight {
     @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException, YeelightResultErrorException {
         String jsonCommand = command.toJson() + "\r\n";
         this.socketHolder.send(jsonCommand);
-        return this.readUntilResult(command.getId());
+        //return this.readUntilResult(command.getId());
+        return new String[]{"ok"};
+    }
+
+    YeelightSocketHolder getSocketHolder() {
+        return socketHolder;
     }
 
     /**

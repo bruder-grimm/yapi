@@ -2,20 +2,18 @@ package com.mollin.yapi;
 
 import com.mollin.yapi.command.YeelightCommand;
 import com.mollin.yapi.enumeration.YeelightEffect;
-import com.mollin.yapi.exception.YeelightResultErrorException;
 import com.mollin.yapi.exception.YeelightSocketException;
+import com.mollin.yapi.socket.YeelightSocketHolder;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.LinkedList;
+import java.util.List;
 
 public class YeelightMusicServer extends Yeelight {
-    private static final int SOCKET_TIMEOUT = 10000;
     private static final int SERVER_PORT = 54321;
 
-    private final Socket serverSocket;
-    private final BufferedWriter socketWriter;
+    private final List<YeelightSocketHolder> connectedDevices = new LinkedList<>();
     private final InetAddress serverAdress;
     private final int port;
 
@@ -31,9 +29,6 @@ public class YeelightMusicServer extends Yeelight {
         super(effect, duration);
         this.serverAdress = InetAddress.getLocalHost();
         this.port = port;
-        this.serverSocket = new ServerSocket(this.port).accept();
-
-        this.socketWriter = new BufferedWriter(new OutputStreamWriter(this.serverSocket.getOutputStream()));
     }
 
     @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException {
@@ -42,13 +37,12 @@ public class YeelightMusicServer extends Yeelight {
         return new String[]{"ok"};
     }
 
-    private void send(String datas) throws YeelightSocketException {
-        try {
-            this.socketWriter.write(datas);
-            this.socketWriter.flush();
-        } catch (Exception e) {
-            throw new YeelightSocketException(e);
-        }
+    private void send(String datas) {
+        this.connectedDevices.forEach(device -> {
+            try {
+                device.send(datas);
+            } catch (YeelightSocketException ignored) {  }
+        });
     }
 
     public void register(YeelightDevice device) throws YeelightSocketException {
@@ -67,16 +61,18 @@ public class YeelightMusicServer extends Yeelight {
                         device.getIp().getHostAddress()
                 ));
             }
+            // there will be no responses from here on out
+            connectedDevices.add(device.getSocketHolder());
         } catch (Exception e) {
             throw new YeelightSocketException(e);
         }
     }
 
-    public void close() throws YeelightSocketException {
-        try {
-            this.serverSocket.close();
-        } catch (IOException e) {
-            throw new YeelightSocketException(e);
-        }
+    public void close() {
+        connectedDevices.forEach(device -> {
+            try {
+                device.close();
+            } catch (IOException ignored) { }
+        });
     }
 }
