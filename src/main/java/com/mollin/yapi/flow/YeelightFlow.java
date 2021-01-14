@@ -5,6 +5,7 @@ import com.mollin.yapi.flow.transition.YeelightTransition;
 import com.mollin.yapi.utils.YeelightUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,10 +36,10 @@ public class YeelightFlow {
      * @param count Number of times to run this flow
      * @param action Action after flow stops
      */
-    public YeelightFlow(int count, YeelightFlowAction action) {
+    public YeelightFlow(int count, YeelightFlowAction action, YeelightTransition... transitions) {
         this.setCount(count);
         this.setAction(action);
-        this.transitions = new ArrayList<>();
+        this.transitions = Arrays.asList(transitions.clone());
     }
 
     /**
@@ -79,6 +80,10 @@ public class YeelightFlow {
      */
     public List<YeelightTransition> getTransitions() {
         return this.transitions;
+    }
+
+    public void setTransitions(List<YeelightTransition> transitions) {
+        this.transitions = transitions;
     }
 
     /**

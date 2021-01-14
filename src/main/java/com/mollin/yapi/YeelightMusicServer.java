@@ -39,7 +39,7 @@ public class YeelightMusicServer extends Yeelight {
         String jsonCommand = command.toJson() + "\r\n";
         for (BufferedWriter service : this.services) {
             try {
-                Logger.debug("sending command {}", jsonCommand);
+                Logger.info("sending command {}", jsonCommand);
                 service.write(jsonCommand);
                 service.flush();
             } catch (IOException e) {
