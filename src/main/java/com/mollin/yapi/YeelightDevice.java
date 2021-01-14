@@ -67,7 +67,7 @@ public class YeelightDevice extends Yeelight {
      * @throws YeelightSocketException when socket error occurs
      * @throws YeelightResultErrorException when result founds is an error
      */
-    private String[] readUntilResult(int id) throws YeelightSocketException, YeelightResultErrorException {
+    public String[] readUntilResult(int id) throws YeelightSocketException, YeelightResultErrorException {
         do {
             String datas = this.socketHolder.readLine();
             // parsing datas
@@ -92,8 +92,7 @@ public class YeelightDevice extends Yeelight {
     @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException, YeelightResultErrorException {
         String jsonCommand = command.toJson() + "\r\n";
         this.socketHolder.send(jsonCommand);
-        //return this.readUntilResult(command.getId());
-        return new String[]{"ok"};
+        return this.readUntilResult(command.getId());
     }
 
     YeelightSocketHolder getSocketHolder() {

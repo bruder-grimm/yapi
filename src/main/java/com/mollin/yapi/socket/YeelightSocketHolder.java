@@ -15,7 +15,12 @@ public class YeelightSocketHolder {
     private static final int SOCKET_TIMEOUT = 1000;
 
     private final InetAddress ip;
-    private final int port;
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    private int port;
     private final Socket socket;
     private final BufferedReader socketReader;
     private final BufferedWriter socketWriter;

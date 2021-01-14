@@ -2,20 +2,24 @@ package com.mollin.yapi;
 
 import com.mollin.yapi.command.YeelightCommand;
 import com.mollin.yapi.enumeration.YeelightEffect;
+import com.mollin.yapi.exception.YeelightResultErrorException;
 import com.mollin.yapi.exception.YeelightSocketException;
-import com.mollin.yapi.socket.YeelightSocketHolder;
+import org.pmw.tinylog.Logger;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 
 public class YeelightMusicServer extends Yeelight {
-    private static final int SERVER_PORT = 54321;
+    private static final int SERVER_PORT = 54345;
 
-    private final List<YeelightSocketHolder> connectedDevices = new LinkedList<>();
     private final InetAddress serverAdress;
-    private final int port;
+    private final int portOffset;
+
+    private final List<BufferedWriter> services = new LinkedList<>();
 
     public YeelightMusicServer() throws IOException {
         this(SERVER_PORT, YeelightEffect.SUDDEN, 100);
@@ -25,34 +29,38 @@ public class YeelightMusicServer extends Yeelight {
         this(port, YeelightEffect.SUDDEN, 100);
     }
 
-    public YeelightMusicServer(int port, YeelightEffect effect, int duration) throws IOException {
+    public YeelightMusicServer(int portOffset, YeelightEffect effect, int duration) throws IOException {
         super(effect, duration);
         this.serverAdress = InetAddress.getLocalHost();
-        this.port = port;
+        this.portOffset = portOffset;
     }
 
-    @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException {
+    @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException, YeelightResultErrorException {
         String jsonCommand = command.toJson() + "\r\n";
-        send(jsonCommand);
-        return new String[]{"ok"};
-    }
-
-    private void send(String datas) {
-        this.connectedDevices.forEach(device -> {
+        for (BufferedWriter service : this.services) {
             try {
-                device.send(datas);
-            } catch (YeelightSocketException ignored) {  }
-        });
+                Logger.debug("sending command {}", jsonCommand);
+                service.write(jsonCommand);
+                service.flush();
+            } catch (IOException e) {
+                throw new YeelightSocketException(e);
+            }
+        }
+
+        return new String[]{};
     }
 
     public void register(YeelightDevice device) throws YeelightSocketException {
         try {
+            int port = this.portOffset + services.size();
             YeelightCommand enableMusicMode = new YeelightCommand(
                     "set_music",
                     1,
                     serverAdress.getHostAddress(),
-                    this.port
+                    port
             );
+
+            createServer(port);
 
             String[] result = device.sendCommand(enableMusicMode);
             if (!result[0].equals("ok")) {
@@ -61,18 +69,30 @@ public class YeelightMusicServer extends Yeelight {
                         device.getIp().getHostAddress()
                 ));
             }
-            // there will be no responses from here on out
-            connectedDevices.add(device.getSocketHolder());
+
         } catch (Exception e) {
             throw new YeelightSocketException(e);
         }
     }
 
-    public void close() {
-        connectedDevices.forEach(device -> {
-            try {
-                device.close();
-            } catch (IOException ignored) { }
-        });
+    public void createServer(int port) {
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(port)) {
+                Socket socket = serverSocket.accept();
+                Logger.info("Yeelight connected to server at port " + port);
+                services.add(
+                        new BufferedWriter(new OutputStreamWriter(new BufferedOutputStream(socket.getOutputStream())))
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void close() throws IOException {
+        for (BufferedWriter bufferedWriter : this.services) {
+            bufferedWriter.close();
+            Logger.debug("Server closed");
+        }
     }
 }
