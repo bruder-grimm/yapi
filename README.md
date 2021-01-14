@@ -3,6 +3,8 @@
 # THIS IS THE MUSIC MODE YOU'RE LOOKING FOR 
 If you're getting quota exceeded when controlling you device, this is the fork of the api that established a direkt connection between yeelight and java
 
+Be a dear and just get this via jitpack
+
 
 # Yapi : Yeelight Java API
 Yapi is an API that lets you control different Yeelight devices via Wi-Fi.
