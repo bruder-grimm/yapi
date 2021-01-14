@@ -6,49 +6,39 @@ import com.mollin.yapi.enumeration.YeelightAdjustProperty;
 import com.mollin.yapi.enumeration.YeelightEffect;
 import com.mollin.yapi.enumeration.YeelightProperty;
 import com.mollin.yapi.exception.YeelightResultErrorException;
-import com.mollin.yapi.flow.YeelightFlow;
+import com.mollin.yapi.exception.YeelightSocketException;
 import com.mollin.yapi.result.YeelightResultError;
 import com.mollin.yapi.result.YeelightResultOk;
-import com.mollin.yapi.exception.YeelightSocketException;
 import com.mollin.yapi.socket.YeelightSocketHolder;
 
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.mollin.yapi.utils.YeelightUtils.clamp;
-import static com.mollin.yapi.utils.YeelightUtils.clampAndComputeRGBValue;
-
 /**
  * Class controlling a Yeelight device (command sending).
  */
-public class YeelightDevice {
-    /**
-     * Socket holder for sending commands (and receive results)
-     */
+public class YeelightDevice extends Yeelight {
+    /** Socket holder for sending commands (and receive results) */
     private final YeelightSocketHolder socketHolder;
-    /**
-     * Device effect setting for commands
-     */
-    private YeelightEffect effect;
-    /**
-     * Device effect duration setting for commands
-     */
-    private int duration;
+    private final InetAddress ip;
 
-    /**
-     * Constructor for Yeelight device
-     * @param ip Yeelight device IP
-     * @param port Yeelight device port
-     * @param effect Device effect setting for commands
-     * @param duration Device effect duration setting for commands
-     * @throws YeelightSocketException when a socket error occurs
-     */
+    InetAddress getIp() {
+        return ip;
+    }
+
+    /** Constructor for Yeelight device
+     *  @param ip Yeelight device IP
+     *  @param port Yeelight device port
+     *  @param effect Device effect setting for commands
+     *  @param duration Device effect duration setting for commands
+     *  @throws YeelightSocketException when a socket error occurs */
     public YeelightDevice(String ip, int port, YeelightEffect effect, int duration) throws YeelightSocketException {
+        super(effect, duration);
         this.socketHolder = new YeelightSocketHolder(ip, port);
-        this.setEffect(effect);
-        this.setDuration(duration);
+        this.ip = this.socketHolder.getIp();
     }
 
     /**
@@ -68,22 +58,6 @@ public class YeelightDevice {
      */
     public YeelightDevice(String ip) throws YeelightSocketException {
         this(ip, 55443);
-    }
-
-    /**
-     * Setter for Yeelight device effect
-     * @param effect Effect to set (if null, 'sudden' is chosen)
-     */
-    public void setEffect(YeelightEffect effect) {
-        this.effect = effect == null ? YeelightEffect.SUDDEN : effect;
-    }
-
-    /**
-     * Setter for Yeelight device effect duration
-     * @param duration Duration to set (&gt;= 0)
-     */
-    public void setDuration(int duration) {
-        this.duration = Math.max(0, duration);
     }
 
     /**
@@ -115,7 +89,7 @@ public class YeelightDevice {
      * @throws YeelightSocketException when socket error occurs
      * @throws YeelightResultErrorException when command result is an error
      */
-    private String[] sendCommand(YeelightCommand command) throws YeelightSocketException, YeelightResultErrorException {
+    @Override String[] sendCommand(YeelightCommand command) throws YeelightSocketException, YeelightResultErrorException {
         String jsonCommand = command.toJson() + "\r\n";
         this.socketHolder.send(jsonCommand);
         return this.readUntilResult(command.getId());
@@ -141,80 +115,6 @@ public class YeelightDevice {
     }
 
     /**
-     * Change the device color temperature
-     * @param colorTemp Color temperature value [1700;6500]
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void setColorTemperature(int colorTemp) throws YeelightResultErrorException, YeelightSocketException {
-        colorTemp = clamp(colorTemp, 1700, 6500);
-        YeelightCommand command = new YeelightCommand("set_ct_abx", colorTemp, this.effect.getValue(), this.duration);
-        this.sendCommand(command);
-    }
-
-    /**
-     * Change the device color
-     * @param r Red value [0;255]
-     * @param g Green value [0;255]
-     * @param b Blue value [0;255]
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void setRGB(int r, int g, int b) throws YeelightResultErrorException, YeelightSocketException {
-        int rgbValue = clampAndComputeRGBValue(r, g, b);
-        YeelightCommand command = new YeelightCommand("set_rgb", rgbValue, this.effect.getValue(), this.duration);
-        this.sendCommand(command);
-    }
-
-    /**
-     * Change hue and sat of the device
-     * @param hue Hue value [0;359]
-     * @param sat Sat value [0;100]
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void setHSV(int hue, int sat) throws YeelightResultErrorException, YeelightSocketException {
-        hue = clamp(hue, 0, 359);
-        sat = clamp(sat, 0, 100);
-        YeelightCommand command = new YeelightCommand("set_hsv", hue, sat, this.effect.getValue(), this.duration);
-        this.sendCommand(command);
-    }
-
-    /**
-     * Change the device brightness
-     * @param brightness Brightness value [1;100]
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void setBrightness(int brightness) throws YeelightResultErrorException, YeelightSocketException {
-        brightness = clamp(brightness, 1, 100);
-        YeelightCommand command = new YeelightCommand("set_bright", brightness, this.effect.getValue(), this.duration);
-        this.sendCommand(command);
-    }
-
-    /**
-     * Switch on or off the device power
-     * @param power Power value (true = on, false = off)
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void setPower(boolean power) throws YeelightResultErrorException, YeelightSocketException {
-        String powerStr = power ? "on" : "off";
-        YeelightCommand command = new YeelightCommand("set_power", powerStr, this.effect.getValue(), this.duration);
-        this.sendCommand(command);
-    }
-
-    /**
-     * Toggle the device power
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void toggle() throws YeelightResultErrorException, YeelightSocketException {
-        YeelightCommand command = new YeelightCommand("toggle");
-        this.sendCommand(command);
-    }
-
-    /**
      * Save current state of the device as 'default'.
      * If device is power off and then power on (hard power reset), the device will show 'default' saved state
      * @throws YeelightResultErrorException when command result is an error
@@ -222,27 +122,6 @@ public class YeelightDevice {
      */
     public void setDefault() throws YeelightResultErrorException, YeelightSocketException {
         YeelightCommand command = new YeelightCommand("set_default");
-        this.sendCommand(command);
-    }
-
-    /**
-     * Start a flow
-     * @param flow Flow to start
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void startFlow(YeelightFlow flow) throws YeelightResultErrorException, YeelightSocketException {
-        YeelightCommand command = new YeelightCommand("start_cf", flow.createCommandParams());
-        this.sendCommand(command);
-    }
-
-    /**
-     * Stop a flow
-     * @throws YeelightResultErrorException when command result is an error
-     * @throws YeelightSocketException when socket error occurs
-     */
-    public void stopFlow() throws YeelightResultErrorException, YeelightSocketException {
-        YeelightCommand command = new YeelightCommand("stop_cf");
         this.sendCommand(command);
     }
 
